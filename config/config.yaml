@@ -1,0 +1,70 @@
+llm:
+  provider: ollama                        # swap to: openai | anthropic
+  model: mistral
+  base_url: http://localhost:11434
+  temperature: 0.2
+  max_tokens: 1024
+  timeout_seconds: 60
+
+agent:
+  max_iterations: 10                      # hard stop on ReAct loop
+  loop_detection_threshold: 3            # abort if same action repeated N times
+  memory_recall_top_k: 3                 # how many past traces to retrieve from ChromaDB
+
+tools:
+  timeout_seconds: 10                    # per-tool call timeout
+
+  rate_limits:                           # max calls per tool per agent run
+    search: 5
+    calculator: 10
+    file_reader: 5
+    wikipedia: 5
+
+  circuit_breaker:
+    failure_threshold: 3                 # consecutive failures before OPEN
+    # circuit stays OPEN for the remainder of the run (no auto-reset)
+
+  search:
+    max_results: 5
+
+  calculator:
+    # list of allowed builtins in safe eval
+    allowed_names:
+      - abs
+      - round
+      - min
+      - max
+      - sum
+      - pow
+      - len
+
+  file_reader:
+    allowed_directory: ./data/files      # sandbox: only files inside this dir
+
+  wikipedia:
+    language: en
+    sentences: 5                         # number of summary sentences to return
+
+memory:
+  chroma:
+    persist_directory: ./chroma_data
+    collection_name: agent_traces
+    embedding_model: all-MiniLM-L6-v2   # sentence-transformers model
+
+database:
+  sqlite:
+    path: ./db/agent_runs.db
+
+api:
+  host: 0.0.0.0
+  port: 8000
+  workers: 1                             # macOS M1: num_workers=0/1 only
+
+monitoring:
+  prometheus:
+    port: 8000                           # same server, /metrics endpoint
+
+logging:
+  level: INFO                            # DEBUG | INFO | WARNING | ERROR
+  format: json                           # structured JSON logs
+  log_dir: ./logs
