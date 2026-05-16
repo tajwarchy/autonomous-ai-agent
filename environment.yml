@@ -36,6 +36,9 @@ dependencies:
       # Terminal UI
       - rich==13.7.1
 
+      # NumPy pinned to 1.x — chromadb/sentence-transformers not yet NumPy 2.0 compatible
+      - numpy<2.0
+
       # Utilities
       - python-multipart==0.0.9
       - tenacity==8.3.0

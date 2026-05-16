@@ -104,6 +104,7 @@ def setup_logging(config: Optional[dict] = None) -> None:
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("chromadb").setLevel(logging.WARNING)
     logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+    logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)
 
     logging.getLogger(__name__).info(
         "logging_initialized",

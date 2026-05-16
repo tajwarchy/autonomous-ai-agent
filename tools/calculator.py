@@ -59,7 +59,8 @@ class CalculatorTool(BaseTool):
         )
 
     def run(self, input_str: str) -> str:
-        expr = input_str.strip()
+        # Strip surrounding quotes the LLM sometimes adds around the expression
+        expr = input_str.strip().strip("\"'")
         if not expr:
             return "ERROR: calculator requires a non-empty expression."
 
