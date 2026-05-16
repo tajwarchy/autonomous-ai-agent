@@ -18,6 +18,13 @@ from typing import Optional
 
 import yaml
 
+from monitoring.metrics import (
+    CIRCUIT_BREAKER_TRIPS_TOTAL,
+    RATE_LIMIT_HITS_TOTAL,
+    TOOL_CALL_TOTAL,
+    TOOL_FAILURE_TOTAL,
+    TOOL_LATENCY_SECONDS,
+)
 from tools.base import BaseTool
 from tools.calculator import CalculatorTool
 from tools.circuit_breaker import CircuitBreaker
@@ -72,6 +79,7 @@ class ToolRouter:
         allowed, msg = self.circuit_breaker.check(tool_name)
         if not allowed:
             latency = time.monotonic() - start
+            CIRCUIT_BREAKER_TRIPS_TOTAL.labels(tool=tool_name).inc()
             logger.info(
                 "tool_blocked_circuit_breaker",
                 extra={"tool": tool_name, "latency_s": round(latency, 3)},
@@ -82,6 +90,7 @@ class ToolRouter:
         allowed, msg = self.rate_limiter.check(tool_name)
         if not allowed:
             latency = time.monotonic() - start
+            RATE_LIMIT_HITS_TOTAL.labels(tool=tool_name).inc()
             logger.info(
                 "tool_blocked_rate_limit",
                 extra={"tool": tool_name, "latency_s": round(latency, 3)},
@@ -104,10 +113,13 @@ class ToolRouter:
 
         # ── 5. Update safety mechanisms ────────────────────────────────
         self.rate_limiter.increment(tool_name)
+        TOOL_CALL_TOTAL.labels(tool=tool_name).inc()
+        TOOL_LATENCY_SECONDS.labels(tool=tool_name).observe(latency)
 
         if success:
             self.circuit_breaker.record_success(tool_name)
         else:
+            TOOL_FAILURE_TOTAL.labels(tool=tool_name).inc()
             self.circuit_breaker.record_failure(tool_name, reason=observation[:120])
 
         logger.info(

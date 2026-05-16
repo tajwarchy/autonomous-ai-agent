@@ -19,12 +19,23 @@ Thought: I now have enough information to answer.
 Action: finish
 Action Input: <your complete final answer>
 
+EXAMPLE OF CORRECT BEHAVIOR:
+Question: What is 10 divided by 2?
+Thought: I will use the calculator tool.
+Action: calculator
+Action Input: 10 / 2
+Observation: 5.0
+Thought: The calculator returned 5.0, which is the answer. I will now finish.
+Action: finish
+Action Input: 10 divided by 2 is 5.0
+
 RULES:
 - Output ONLY the three lines above. No extra text, no markdown, no explanations outside the format.
 - Action must be one of the listed tool names or "finish". No other values.
-- Action Input must be a single plain string. No JSON, no brackets.
+- Action Input must be a single plain string. No JSON, no brackets, no surrounding quotes.
+- CRITICAL: Once a tool returns a clear result, call finish IMMEDIATELY with your answer. Do NOT call the same tool again to verify.
 - Never repeat the same Action + Action Input combination more than once.
-- If a tool returns an error, reason about why and try a different approach.
+- If a tool returns an error, reason about why and try a different approach or a different tool.
 - If you cannot find the answer after using the tools, use finish and say so honestly.
 
 QUESTION: {query}

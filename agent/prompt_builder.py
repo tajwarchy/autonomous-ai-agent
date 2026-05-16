@@ -95,14 +95,26 @@ class PromptBuilder:
         """
         Renders prior ReAct turns as plain text so the LLM sees its own
         reasoning and can continue from where it left off.
+
+        After the last observation, adds an explicit nudge so smaller models
+        (Mistral 7B) understand they must now call finish, not repeat the tool.
         """
         blocks = []
-        for turn in history:
+        for i, turn in enumerate(history):
             block = (
                 f"Thought: {turn['thought']}\n"
                 f"Action: {turn['action']}\n"
                 f"Action Input: {turn['action_input']}\n"
                 f"Observation: {turn['observation']}"
             )
+            # After the last turn, add an explicit finish nudge
+            if i == len(history) - 1 and not turn["observation"].startswith("ERROR"):
+                block += (
+                    f"\n\nThe observation above is your answer. "
+                    f"You MUST now call finish. Do NOT call any tool again."
+                    f"\nThought: I have the answer from the observation."
+                    f"\nAction: finish"
+                    f"\nAction Input:"
+                )
             blocks.append(block)
         return "\n\n".join(blocks)

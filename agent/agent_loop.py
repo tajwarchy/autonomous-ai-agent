@@ -28,6 +28,12 @@ from agent.prompt_builder import PromptBuilder
 from agent.react_parser import ReActParser, build_corrective_prompt
 from db.sqlite_logger import SQLiteLogger
 from memory.chroma_store import ChromaStore
+from monitoring.metrics import (
+    AGENT_ACTIVE_RUNS,
+    AGENT_RUN_LATENCY_SECONDS,
+    AGENT_RUN_TOTAL,
+    AGENT_STEPS_HISTOGRAM,
+)
 from tools.tool_router import ToolRouter
 
 logger = logging.getLogger(__name__)
@@ -99,6 +105,7 @@ class AgentLoop:
 
         logger.info("run_start", extra={"run_id": run_id, "query": query})
         self._print_run_start(run_id, query)
+        AGENT_ACTIVE_RUNS.inc()
 
         # Per-run state
         router = ToolRouter(self._cfg)
@@ -159,7 +166,10 @@ class AgentLoop:
             self._print_thought(iteration, step.thought)
 
             # ── Loop detection ─────────────────────────────────────────
-            loop_key = f"{step.action}::{step.action_input}"
+            # Normalise action_input before keying — strip surrounding quotes
+            # so "144 / 12" and 144 / 12 don't count as different actions
+            norm_input = step.action_input.strip().strip("\"'")
+            loop_key = f"{step.action}::{norm_input}"
             action_counts[loop_key] += 1
             if action_counts[loop_key] >= self._loop_threshold:
                 fail_reason = (
@@ -253,6 +263,10 @@ class AgentLoop:
         self._chroma.store_trace(run_id, query, trace_summary)
 
         self._print_run_end(result)
+        AGENT_ACTIVE_RUNS.dec()
+        AGENT_RUN_TOTAL.labels(outcome=state).inc()
+        AGENT_RUN_LATENCY_SECONDS.observe(duration)
+        AGENT_STEPS_HISTOGRAM.observe(result.steps)
         logger.info(
             "run_end",
             extra={
