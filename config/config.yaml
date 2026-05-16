@@ -1,7 +1,8 @@
 llm:
   provider: ollama                        # swap to: openai | anthropic
   model: mistral
-  base_url: http://localhost:11434
+  # localhost when running directly; host.docker.internal when in Docker
+  base_url: http://host.docker.internal:11434
   temperature: 0.2
   max_tokens: 1024
   timeout_seconds: 60

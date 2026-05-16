@@ -22,8 +22,17 @@ logger = logging.getLogger(__name__)
 
 
 def load_config(path: str = "config/config.yaml") -> dict:
+    import os
     with open(path) as f:
-        return yaml.safe_load(f)
+        cfg = yaml.safe_load(f)
+    # Local override — never committed, used for local uvicorn runs
+    local_path = path.replace("config.yaml", "config.local.yaml")
+    if os.path.exists(local_path):
+        with open(local_path) as f:
+            local = yaml.safe_load(f)
+        # Deep merge llm section only
+        cfg["llm"].update(local.get("llm", {}))
+    return cfg
 
 
 class LLMClient:

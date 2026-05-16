@@ -3,6 +3,7 @@ DuckDuckGo search tool — no API key required.
 """
 
 import logging
+import time
 from typing import Optional
 
 import yaml
@@ -33,13 +34,23 @@ class SearchTool(BaseTool):
         return "Search the web using DuckDuckGo. Input: a plain search query string."
 
     def run(self, input_str: str) -> str:
-        query = input_str.strip()
+        # Strip surrounding quotes the LLM sometimes adds
+        query = input_str.strip().strip("\"'")
         if not query:
             return "ERROR: search requires a non-empty query."
 
         try:
-            with DDGS() as ddgs:
-                results = list(ddgs.text(query, max_results=self._max_results))
+            results = None
+            for attempt in range(3):
+                try:
+                    with DDGS() as ddgs:
+                        results = list(ddgs.text(query, max_results=self._max_results))
+                    break
+                except Exception as e:
+                    if attempt < 2 and "202" in str(e):
+                        time.sleep(2 ** attempt)   # 1s, 2s backoff
+                        continue
+                    raise
 
             if not results:
                 return f"No results found for query: {query!r}"

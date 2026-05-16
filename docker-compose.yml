@@ -1,0 +1,63 @@
+services:
+
+  # ── FastAPI agent ──────────────────────────────────────────────────────
+  agent:
+    build: .
+    container_name: autonomous-agent
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./chroma_data:/app/chroma_data   # persist ChromaDB between restarts
+      - ./db:/app/db                     # persist SQLite between restarts
+      - ./logs:/app/logs                 # persist structured logs
+      - ./data:/app/data                 # file reader sandbox
+      - ./config:/app/config             # live config (no rebuild needed)
+      - ./prompts:/app/prompts           # live prompt edits
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Ollama runs on the host Mac, not in Docker
+    # Use host.docker.internal to reach it from inside the container
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # ── Prometheus ────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    restart: unless-stopped
+
+  # ── Grafana ───────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/agent_dashboard.json
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus_data:
+  grafana_data:

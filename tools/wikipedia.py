@@ -41,7 +41,8 @@ class WikipediaTool(BaseTool):
         )
 
     def run(self, input_str: str) -> str:
-        topic = input_str.strip()
+        # Strip surrounding quotes the LLM sometimes adds
+        topic = input_str.strip().strip("\"'")
         if not topic:
             return "ERROR: wikipedia requires a non-empty topic."
 

@@ -75,7 +75,10 @@ class PromptBuilder:
             history: List of dicts with keys: thought, action, action_input, observation.
         """
         history_block = self._format_history(history)
-        return f"{initial_prompt}\n\n{history_block}"
+        # Always append the next-turn cue so the model knows to continue
+        # in ReAct format — not dump free text
+        cue = "\nThought:"
+        return f"{initial_prompt}\n\n{history_block}{cue}"
 
     # ------------------------------------------------------------------
     # Formatting helpers
