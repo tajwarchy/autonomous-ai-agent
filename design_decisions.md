@@ -1,6 +1,26 @@
-# Design Decisions
+---
 
-This document records architectural choices and failure mode handling made before writing functional code.
+## Implementation Observations
+
+### Mistral 7B prompt compliance
+Mistral 7B does not reliably follow `finish` instructions in the ReAct format. Three mitigations were implemented iteratively:
+1. One-shot example added to `prompts/react.txt`
+2. Explicit finish nudge injected after successful observations in `prompt_builder.py`
+3. Prompt continuation (`\nThought:` cue appended to every continuation prompt) — most effective
+
+### Quote wrapping
+Mistral consistently wraps Action Input values in surrounding quotes (`"2 + 2"`, `'Python (programming language)'`). Fixed by stripping quotes at the entry point of calculator, search, and wikipedia tools. Loop detection key also normalised by stripping quotes before hashing.
+
+### DuckDuckGo rate limiting
+DuckDuckGo's free API aggressively rate-limits repeated queries (HTTP 202). The circuit breaker correctly detects this and blocks further calls after 3 failures. A retry with exponential backoff (1s, 2s) was added for transient rate limit errors. For production, replace with a paid search API.
+
+### ChromaDB telemetry noise
+ChromaDB's PostHog telemetry client had a breaking API change. Silenced via `logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)` in `logger_setup.py`.
+
+### NumPy 2.0 incompatibility
+`sentence-transformers` and `chromadb` were incompatible with NumPy 2.0 at the time of development. Pinned to `numpy<2.0` in `environment.yml`.# Design Decisions
+
+This document records architectural choices and failure mode handling decided before writing functional code, plus resolutions observed during implementation.
 
 ---
 
